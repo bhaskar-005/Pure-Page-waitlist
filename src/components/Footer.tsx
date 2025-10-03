@@ -116,7 +116,7 @@ export function Footer() {
           transition={{ duration: 0.6, delay: 0.3 }}
         >
           <p>
-            &copy; {new Date().getFullYear()} <span className="text-blue-900">Pure Page</span>.  
+            © {new Date().getFullYear()} <span className="text-blue-900">Pure Page</span>.  
             Built for thoughtful writers.
           </p>
         </motion.div>

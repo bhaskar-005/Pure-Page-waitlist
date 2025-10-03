@@ -68,7 +68,7 @@ export function Waitlist() {
             <div className="text-center">
               <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-green-800 mb-2">🎉 You're on the list!</h3>
-              <p className="text-green-800">We’ll keep you updated as launch gets closer.</p>
+              <p className="text-green-800">We'll keep you updated as launch gets closer.</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
