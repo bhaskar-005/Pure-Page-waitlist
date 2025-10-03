@@ -3,9 +3,9 @@ import { motion } from "framer-motion"
 
 export function Footer() {
   const socialIcons = [
-    { icon: Twitter, href: "#", label: "Twitter" },
-    { icon: Instagram, href: "#", label: "Instagram" },
-    { icon: Mail, href: "#", label: "Email" }
+    { icon: Twitter, href: "https://x.com/bhaskar_builds", label: "Twitter" },
+    // { icon: Instagram, href: "#", label: "Instagram" },
+    { icon: Mail, href: "mailto:purepage.ai@gmail.com", label: "Email" }
   ]
 
   return (
