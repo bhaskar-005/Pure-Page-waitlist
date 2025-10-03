@@ -1,123 +1,105 @@
-"use server"
+"use server";
 
 import { NextResponse } from "next/server";
-import fs from "fs";
-import {UAParser} from "ua-parser-js";
+import { UAParser } from "ua-parser-js";
 import axios from "axios";
-import path from "path";
+import { Pool } from "pg";
 
-const DATA_FILE = path.join(process.cwd(), "data", "waitlist.json");
-
-const folder = path.dirname(DATA_FILE);
-if (!fs.existsSync(folder)) {
-  fs.mkdirSync(folder, { recursive: true }); 
-}
-
-if (!fs.existsSync(DATA_FILE)) {
-  fs.writeFileSync(DATA_FILE, "[]");
-}
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+  });
+const geoCache = new Map<string, { country: string; region: string; city: string }>();
 
 async function getGeo(ip: string) {
-    try {
-      const res = await axios.get(`http://ip-api.com/json/${ip}`);
-      console.log(ip, res)
-      return {
-        country: res.data.country || "Unknown",
-        region: res.data.regionName || "Unknown",
-        city: res.data.city || "Unknown",
-      };
-    } catch (err) {
-      return { country: "Unknown", region: "Unknown", city: "Unknown" };
-    }
+  if (geoCache.has(ip)) return geoCache.get(ip)!;
+  try {
+    const res = await axios.get(`http://ip-api.com/json/${ip}`);
+    const location = {
+      country: res.data.country || "Unknown",
+      region: res.data.regionName || "Unknown",
+      city: res.data.city || "Unknown",
+    };
+    geoCache.set(ip, location);
+    return location;
+  } catch (err) {
+    return { country: "Unknown", region: "Unknown", city: "Unknown" };
   }
+}
 
-  function readData() {
-    if (!fs.existsSync(DATA_FILE)) {
-      fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true }); // create folder if missing
-      fs.writeFileSync(DATA_FILE, "[]"); // create empty JSON array
-    }
-    const raw = fs.readFileSync(DATA_FILE, "utf-8");
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return [];
-    }
-  }
-
-  function writeData(data: any[]) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-  }
-  
-
-// POST API - submit waitlist info
 export async function POST(req: Request) {
   try {
     const forwarded = req.headers.get("x-forwarded-for") || "";
-    let ip = forwarded.split(",")[0].trim() || req.headers.get("x-real-ip") || "";
+    const ip = forwarded.split(",")[0].trim() || req.headers.get("x-real-ip") || "Unknown";
 
     const data = await req.json();
-    const { email, note, utmSource, utmCampaign, screenWidth, screenHeight } = data;
+    const { email, note, utmSource, utmCampaign, screenWidth, screenHeight, timezone } = data;
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-    const ua = UAParser(req.headers.get("user-agent") || "");
-    const device = {
-        browser: `${ua.browser.name || "Unknown"} ${ua.browser.version || ""}`.trim(),
-        os: `${ua.os.name || "Unknown"} ${ua.os.version || ""}`.trim(),
-        deviceType: ua.device.type || "Desktop", // fallback to Desktop if undefined
-        language: req.headers.get("accept-language") || "Unknown",
-        screenWidth: screenWidth || null,
-        screenHeight: screenHeight || null,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Unknown",
-      };
-      
+   
+    const ua = new UAParser(req.headers.get("user-agent") || "");
+    const browser = ua.getBrowser();
+    const os = ua.getOS();
+    const deviceInfo = ua.getDevice();
 
-    // Geolocation
     const location = await getGeo(ip);
     const referrer = req.headers.get("referer") || "Unknown";
     const timestamp = new Date().toISOString();
 
-    const submission = {
-      email,
-      note: note || "",
-      timestamp,
-      ip,
-      location,
-      device,
-      referrer,
-      utm: {
-        source: utmSource || "",
-        campaign: utmCampaign || "",
-      },
-    };
+    // Insert synchronously into DB
+    await pool.query(
+      `INSERT INTO waitlist (
+        email, note, created_at, ip,
+        country, region, city,
+        browser, os, device_type,
+        language, screen_width, screen_height,
+        timezone, referrer, utm_source, utm_campaign
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+      [
+        email,
+        note || "",
+        timestamp,
+        ip,
+        location.country,
+        location.region,
+        location.city,
+        `${browser.name || "Unknown"} ${browser.version || ""}`,
+        `${os.name || "Unknown"} ${os.version || ""}`,
+        deviceInfo.type || "Desktop",
+        req.headers.get("accept-language") || "Unknown",
+        screenWidth || null,
+        screenHeight || null,
+        timezone || "Unknown",
+        referrer,
+        utmSource || "",
+        utmCampaign || "",
+      ]
+    );
 
-    const existingData = readData();
-    existingData.push(submission);
-    writeData(existingData);
-
-    return NextResponse.json({ message: "Submission successful" });
+    return NextResponse.json({ message: "Submission received" });
   } catch (error) {
-    console.error(error);
+    console.error("Waitlist POST error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
-// GET API - fetch all waitlist data (protected with password param)
+// GET API - fetch all waitlist data (protected via header token)
 export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const password = searchParams.get("password");
+    const authHeader = req.headers.get("authorization") || "";
+    const token = authHeader.replace("Bearer ", "");
 
-    if (password !== process.env.WAITLIST_PASSWORD) {
+    if (token !== process.env.WAITLIST_PASSWORD) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const data = readData();
-    return NextResponse.json({ data });
+    const res = await pool.query(`SELECT * FROM waitlist ORDER BY created_at DESC`);
+
+    return NextResponse.json({ data:  res.rows || [] });
   } catch (error) {
-    console.error(error);
+    console.error("Waitlist GET error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
