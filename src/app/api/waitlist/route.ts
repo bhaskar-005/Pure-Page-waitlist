@@ -88,10 +88,11 @@ export async function POST(req: Request) {
 // GET API - fetch all waitlist data (protected via header token)
 export async function GET(req: Request) {
   try {
-    const authHeader = req.headers.get("authorization") || "";
-    const token = authHeader.replace("Bearer ", "");
+    const { searchParams } = new URL(req.url);
+    const password = searchParams.get("password");
 
-    if (token !== process.env.WAITLIST_PASSWORD) {
+
+    if (password !== process.env.WAITLIST_PASSWORD) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
