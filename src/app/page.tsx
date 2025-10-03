@@ -7,7 +7,7 @@ import { Footer } from "@/components/Footer"
 
 export default function Page() {
   return (
-    <>
+    <div className="bg-white">
       <Header />
       <main>
         <Hero />
@@ -15,6 +15,6 @@ export default function Page() {
         <Waitlist />
       </main>
       <Footer />
-    </>
+    </div>
   )
 }

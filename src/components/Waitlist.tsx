@@ -88,7 +88,7 @@ export function Waitlist() {
                 </div>
                 <motion.button
                   type="submit"
-                  className="relative px-8 py-4 rounded-xl font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-700 shadow-lg hover:shadow-xl transition flex items-center justify-center"
+                  className="relative cursor-pointer px-8 py-4 rounded-xl font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-700 shadow-lg hover:shadow-xl transition flex items-center justify-center"
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
                   disabled={isLoading}
