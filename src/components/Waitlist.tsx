@@ -132,7 +132,7 @@ export function Waitlist() {
                     <textarea
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
-                      placeholder="Anything you'd like to share with us? (optional)"
+                      placeholder="Anything you&apos;d like to share with us? (optional)"
                       rows={3}
                       className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition text-gray-800 placeholder-gray-400"
                       disabled={isLoading}

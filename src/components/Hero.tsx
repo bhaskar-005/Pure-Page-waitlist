@@ -10,14 +10,14 @@ export function Hero() {
     }
   };
 
-  const itemVariants = {
-    hidden: { y: 30, opacity: 0 },
-    visible: { 
-      y: 0, 
-      opacity: 1, 
-      transition: { duration: 0.8, ease: "easeOut" } 
-    }
-  };
+  // const itemVariants = {
+  //   hidden: { y: 30, opacity: 0 },
+  //   visible: { 
+  //     y: 0, 
+  //     opacity: 1, 
+  //     transition: { duration: 0.8, ease: "easeOut" } 
+  //   }
+  // };
 
   return (
     <section className="relative pt-24 pb-32 px-6 overflow-hidden bg-gradient-to-b from-blue-100/80 to-gray-200/0">
