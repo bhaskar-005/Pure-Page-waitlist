@@ -3,15 +3,26 @@
 import { NextResponse } from "next/server";
 import { UAParser } from "ua-parser-js";
 import axios from "axios";
-import { Pool } from "pg";
+import { MongoClient } from "mongodb";
 
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-  });
+let client: MongoClient | null = null;
+let db: any = null;
+
+async function connectDB() {
+  if (db) return db;
+
+  client = new MongoClient(process.env.DATABASE_URL!);
+  await client.connect();
+
+  db = client.db(); // uses the DB from the connection string
+  return db;
+}
+
 const geoCache = new Map<string, { country: string; region: string; city: string }>();
 
 async function getGeo(ip: string) {
   if (geoCache.has(ip)) return geoCache.get(ip)!;
+
   try {
     const res = await axios.get(`http://ip-api.com/json/${ip}`);
     const location = {
@@ -28,6 +39,9 @@ async function getGeo(ip: string) {
 
 export async function POST(req: Request) {
   try {
+    const db = await connectDB();
+    const collection = db.collection("waitlist");
+
     const forwarded = req.headers.get("x-forwarded-for") || "";
     const ip = forwarded.split(",")[0].trim() || req.headers.get("x-real-ip") || "Unknown";
 
@@ -38,45 +52,33 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-   
     const ua = new UAParser(req.headers.get("user-agent") || "");
     const browser = ua.getBrowser();
     const os = ua.getOS();
     const deviceInfo = ua.getDevice();
 
-    const location = await getGeo(ip);
     const referrer = req.headers.get("referer") || "Unknown";
-    const timestamp = new Date().toISOString();
+    const timestamp = new Date();
 
-    // Insert synchronously into DB
-    await pool.query(
-      `INSERT INTO waitlist (
-        email, note, created_at, ip,
-        country, region, city,
-        browser, os, device_type,
-        language, screen_width, screen_height,
-        timezone, referrer, utm_source, utm_campaign
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
-      [
-        email,
-        note || "",
-        timestamp,
-        ip,
-        location.country,
-        location.region,
-        location.city,
-        `${browser.name || "Unknown"} ${browser.version || ""}`,
-        `${os.name || "Unknown"} ${os.version || ""}`,
-        deviceInfo.type || "Desktop",
-        req.headers.get("accept-language") || "Unknown",
-        screenWidth || null,
-        screenHeight || null,
-        timezone || "Unknown",
-        referrer,
-        utmSource || "",
-        utmCampaign || "",
-      ]
-    );
+    await collection.insertOne({
+      email,
+      note: note || "",
+      created_at: timestamp,
+      ip,
+
+      browser: `${browser.name || "Unknown"} ${browser.version || ""}`,
+      os: `${os.name || "Unknown"} ${os.version || ""}`,
+      device_type: deviceInfo.type || "Desktop",
+      language: req.headers.get("accept-language") || "Unknown",
+
+      screen_width: screenWidth || null,
+      screen_height: screenHeight || null,
+      timezone: timezone || "Unknown",
+
+      referrer,
+      utm_source: utmSource || "",
+      utm_campaign: utmCampaign || "",
+    });
 
     return NextResponse.json({ message: "Submission received" });
   } catch (error) {
@@ -85,20 +87,21 @@ export async function POST(req: Request) {
   }
 }
 
-// GET API - fetch all waitlist data (protected via header token)
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const password = searchParams.get("password");
 
-
     if (password !== process.env.WAITLIST_PASSWORD) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const res = await pool.query(`SELECT * FROM waitlist ORDER BY created_at DESC`);
+    const db = await connectDB();
+    const collection = db.collection("waitlist");
 
-    return NextResponse.json({ data:  res.rows || [] });
+    const data = await collection.find().sort({ created_at: -1 }).toArray();
+
+    return NextResponse.json({ data });
   } catch (error) {
     console.error("Waitlist GET error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

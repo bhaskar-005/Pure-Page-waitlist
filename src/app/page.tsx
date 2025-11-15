@@ -1,6 +1,7 @@
 "use client"
+
 import { Header } from "@/components/Header"
-import { Hero } from "@/components/Hero"
+import Hero from "@/components/Hero"
 import { Features } from "@/components/Features"
 import { Waitlist } from "@/components/Waitlist"
 import { Footer } from "@/components/Footer"
@@ -11,10 +12,10 @@ export default function Page() {
       <Header />
       <main>
         <Hero />
-        <Features />
-        <Waitlist />
+        {/* <Features /> */}
+        {/* <Waitlist /> */}
       </main>
-      <Footer />
+      {/* <Footer /> */}
     </div>
   )
 }
