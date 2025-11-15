@@ -193,8 +193,8 @@ export default function ChronistsHero() {
           setError(err.response?.data?.error || "Something went wrong")
         } else {
           setError("Something went wrong")
-          toast.error("Please try again.")
         }
+        toast.error("Please try again.");
       } finally {
        setIsLoading(false)
       }
