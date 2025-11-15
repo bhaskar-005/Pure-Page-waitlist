@@ -21,13 +21,30 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/* Google Analytics */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-E79FYXFSJY" />
+
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-E79FYXFSJY', {
+                page_path: window.location.pathname,
+              });
+            `,
+          }}
+        />
+      </head>
       <body
         className={`${workSans.variable} antialiased`}
       >
         <Toaster
-  position="bottom-right"
-  reverseOrder={false}
-/>
+        position="bottom-right"
+        reverseOrder={false}
+      />
         {children}
       </body>
     </html>
