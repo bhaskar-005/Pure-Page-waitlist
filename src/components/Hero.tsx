@@ -202,6 +202,7 @@ export default function ChronistsHero() {
 
   return (
     <section
+      id="waitlist"
       aria-label="Chronists hero"
       className="relative w-full h-[660px] sm:h-[780px] flex items-center"
     >
