@@ -10,7 +10,7 @@ import { useEffect, useState } from "react"
 import { LucideArrowDown, LucideArrowUp } from "lucide-react"
 
 
-export function useActiveSection() {
+function useActiveSection() {
   const [active, setActive] = useState<"waitlist" | "feature">("waitlist");
 
   useEffect(() => {
